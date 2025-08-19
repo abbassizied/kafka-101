@@ -1,6 +1,6 @@
-version: "3.9"
-services:
+---
 
+services:
   ####################################
   ######### Kafka + UI ###############
   ####################################
@@ -56,7 +56,7 @@ services:
     restart: "no"
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: productdb   # default db (others created by init script)
+      MYSQL_DATABASE: kafka_101_productdb # default db (others created by init script)
     ports:
       - "3306:3306"
     networks:
@@ -64,29 +64,32 @@ services:
     volumes:
       - ./docker/mysql_data:/var/lib/mysql
       - ./docker/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   phpmyadmin:
     image: phpmyadmin
     container_name: phpmyadmin
     restart: "no"
-    depends_on:
-      - mysql
     ports:
       - 8077:80
     environment:
-      PMA_HOST: mysql
+      PMA_HOST: mysql # This should match your MySQL service name
       PMA_PORT: 3306
       PMA_USER: root
       PMA_PASSWORD: rootpass
     networks:
       - kafka-101-net
+    depends_on:
+      mysql:
+        condition: service_healthy
 
 ###############################################
-######### stack networks + volumes ############
+######### stack networks ######################
 ###############################################
-
-volumes:
-  mysql_data:
 
 networks:
   kafka-101-net:
