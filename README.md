@@ -165,62 +165,41 @@ kafka-101/
 ### Create a New Product
 **Endpoint:** `POST /api/products`
 
-**Description:** Creates a new product in the inventory system.
+**Description:** Creates a new product in the Product Service. This will automatically publish a `product-events` Kafka message to synchronize data with other services.
 
 **Request Body:**
 ```json
 {
   "name": "iPhone 15 Pro",
-  "description": "Latest Apple smartphone with advanced camera features",
-  "sku": "IPHONE15-PRO-256GB",
   "price": 999.99,
-  "currentStock": 50,
-  "minStockThreshold": 10,
-  "category": "ELECTRONICS"
+  "quantity": 50
 }
 ```
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8080/api/products" \
+curl -X POST "http://localhost:8081/api/products" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "iPhone 15 Pro",
-    "description": "Latest Apple smartphone with advanced camera features",
-    "sku": "IPHONE15-PRO-256GB",
     "price": 999.99,
-    "currentStock": 50,
-    "minStockThreshold": 10,
-    "category": "ELECTRONICS"
+    "quantity": 50
   }'
 ```
-
-**Required Fields:**
-- `name` (string): Product name
-- `sku` (string): Unique stock keeping unit
-- `price` (number): Product price
-- `currentStock` (integer): Initial stock quantity
-
-**Optional Fields:**
-- `description` (string): Product description
-- `minStockThreshold` (integer): Low stock alert threshold (default: 5)
-- `category` (string): Product category
 
 **Response:**
 ```json
 {
   "id": 1,
   "name": "iPhone 15 Pro",
-  "description": "Latest Apple smartphone with advanced camera features",
-  "sku": "IPHONE15-PRO-256GB",
   "price": 999.99,
-  "currentStock": 50,
-  "minStockThreshold": 10,
-  "category": "ELECTRONICS",
+  "quantity": 50,
   "createdAt": "2024-01-15T10:30:00Z",
   "updatedAt": "2024-01-15T10:30:00Z"
 }
 ```
+
+**Kafka Event Published:** `product-events` topic with product data
 
 ---
 
@@ -229,7 +208,7 @@ curl -X POST "http://localhost:8080/api/products" \
 ### Create a New Customer
 **Endpoint:** `POST /api/customers`
 
-**Description:** Registers a new customer in the system.
+**Description:** Registers a new customer in the Customer Service. This will automatically publish a `customer-events` Kafka message to synchronize data with other services.
 
 **Request Body:**
 ```json
@@ -256,7 +235,7 @@ curl -X POST "http://localhost:8080/api/products" \
 
 **Example Request:**
 ```bash
-curl -X POST "http://localhost:8080/api/customers" \
+curl -X POST "http://localhost:8082/api/customers" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Doe",
@@ -280,20 +259,20 @@ curl -X POST "http://localhost:8080/api/customers" \
 ```
 
 **Required Fields:**
-- `name` (string): Customer's full name
-- `email` (string): Unique email address
-- `phone` (string): Phone number
+- `name` (string): Customer's full name (2-100 characters)
+- `email` (string): Unique valid email address
+- `phone` (string): Valid phone number format
 
 **Optional Fields:**
 - `shippingAddress` (object): Default shipping address
-- `billingAddress` (object): Billing address (if different from shipping)
+- `billingAddress` (object): Billing address
 
 **Address Fields:**
 - `street` (string): Street address
-- `city` (string): City
+- `city` (string): City name
 - `state` (string): State/Province code
 - `postalCode` (string): ZIP/Postal code
-- `country` (string): Country
+- `country` (string): Country name
 
 **Response:**
 ```json
@@ -321,63 +300,180 @@ curl -X POST "http://localhost:8080/api/customers" \
 }
 ```
 
----
-
-## ⚠️ Common Error Responses
-
-**400 Bad Request:**
-```json
-{
-  "timestamp": "2024-01-15T10:30:00Z",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "details": ["Email must be valid", "Price must be positive"]
-}
-```
-
-**409 Conflict:**
-```json
-{
-  "timestamp": "2024-01-15T10:30:00Z",
-  "status": 409,
-  "error": "Conflict",
-  "message": "Customer with email already exists"
-}
-```
-
-**500 Internal Server Error:**
-```json
-{
-  "timestamp": "2024-01-15T10:30:00Z",
-  "status": 500,
-  "error": "Internal Server Error",
-  "message": "An unexpected error occurred"
-}
-```
+**Kafka Event Published:** `customer-events` topic with customer data
 
 ---
 
-## 🔄 Validation Rules
+## 🛒 Orders
 
-### Product Validation:
-- `name`: 2-100 characters, required
-- `sku`: Unique, 3-50 characters, required
-- `price`: Positive number, required
-- `currentStock`: Non-negative integer, required
-- `minStockThreshold`: Non-negative integer, optional
+### Create a New Order
+**Endpoint:** `POST /api/orders`
 
-### Customer Validation:
-- `name`: 2-100 characters, required
-- `email`: Valid email format, unique, required
-- `phone`: Valid phone format, unique, required
-- Address fields: All optional, but if provided must follow format
+**Description:** Creates a new order using LOCAL data replicas. Order Service maintains replicas of customer and product data synchronized via Kafka events. No synchronous HTTP calls to other services.
+
+**Request Body:**
+```json
+{
+  "status": "CREATED",
+  "customer": 1,
+  "orderItems": [
+    {
+      "quantity": 2,
+      "product": 1
+    }
+  ]
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8083/api/orders" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "CREATED",
+    "customer": 1,
+    "orderItems": [
+      {
+        "quantity": 2,
+        "product": 1
+      }
+    ]
+  }'
+```
+
+**Required Fields:**
+- `status` (string): Order status (CREATED, CONFIRMED, PROCESSING, CANCELLED, COMPLETED)
+- `customer` (number): Customer ID from local replica
+- `orderItems` (array): List of order items
+
+**Order Item Fields:**
+- `quantity` (integer): Positive quantity of the product
+- `product` (number): Product ID from local replica
+
+**Response:**
+```json
+{
+  "id": 1,
+  "status": "CREATED",
+  "customer": 1,
+  "orderItems": [
+    {
+      "id": 1,
+      "quantity": 2,
+      "product": 1,
+      "order": 1
+    }
+  ],
+  "dateCreated": "2024-01-15T10:30:00Z",
+  "lastUpdated": "2024-01-15T10:30:00Z"
+}
+```
 
 ---
 
-## 🎯 Tips for Testing
+## 🔄 Event-Driven Architecture Flow
 
-1. **Use Swagger UI:** Navigate to `http://localhost:8080/swagger-ui.html` for interactive testing
-2. **Start with minimal data:** Omit optional fields initially
-3. **Check uniqueness:** Ensure email and phone are unique for customers, SKU for products
-4. **Validate responses:** Check for proper status codes (201 Created for success)
+### Data Synchronization:
+1. **Product Created** → Product Service publishes `product-events` → Order Service updates local replica
+2. **Customer Created** → Customer Service publishes `customer-events` → Order Service updates local replica
+
+
+### Order Creation Process:
+1. **Local Validation**: Check customer/product existence in local replicas
+2. **Stock Validation**: Verify sufficient stock in local product replica
+3. **Order Persistence**: Save order to local database
+4. **Event Publishing**: Send Kafka events for other services to react(if needed, we don't in our case because we haven't inventory service)
+
+---
+
+## 🧪 Testing Workflow
+
+### Step 1: Create Test Data
+```bash
+# Create product (will replicate to Order Service)
+curl -X POST "http://localhost:8081/api/products" \
+  -d '{"name": "Test Product", "price": 29.99, "quantity": 100}'
+
+# Create customer (will replicate to Order Service)
+curl -X POST "http://localhost:8082/api/customers" \
+  -d '{"name": "Test Customer", "email": "test@example.com", "phone": "+1-555-TEST"}'
+
+# Wait a few seconds for Kafka replication
+sleep 3
+```
+
+### Step 2: Verify Data Replication
+```bash
+# Check product replica in Order Service
+curl "http://localhost:8083/api/products/1"
+
+# Check customer replica in Order Service  
+curl "http://localhost:8083/api/customers/1"
+```
+
+### Step 3: Create Order (Uses Local Data)
+```bash
+# This uses LOCAL replicas only - no service calls
+curl -X POST "http://localhost:8083/api/orders" \
+  -d '{"status": "CREATED", "customer": 1, "orderItems": [{"quantity": 2, "product": 1}]}'
+```
+
+### Step 4: Monitor Events
+```bash
+# Check Kafka topics to verify events were published
+# order-events: should contain order created event
+# inventory-updates: should contain stock reservation
+```
+
+---
+
+## 📊 Service Ports and Responsibilities
+
+| Service | Port | Responsibility | Data Replicated |
+|---------|------|----------------|-----------------|
+| Product Service | 8081 | Product management | Products → Order Service |
+| Customer Service | 8082 | Customer management | Customers → Order Service |
+| Order Service | 8083 | Order processing | Local replicas of products & customers |
+
+---
+
+## ⚠️ Common Scenarios & Solutions
+
+### Scenario: "Customer not found" when creating order
+**Solution:** Wait for Kafka replication or check if customer was created successfully
+
+### Scenario: "Product not found" when creating order  
+**Solution:** Verify product exists and check Kafka connectivity
+
+### Scenario: "Insufficient stock" error
+**Solution:** Check product quantity in Product Service, may need restock
+
+---
+
+## 🎯 Testing Tips
+
+1. **Check Kafka Health**: Verify all services are connected to Kafka
+2. **Monitor Replication**: Use `curl http://localhost:8083/api/products/1` to check data sync
+3. **Event Debugging**: Use Kafdrop or console consumer to monitor events
+4. **Order Service Logs**: Check for local validation messages
+5. **Timing**: Allow few seconds for Kafka replication between operations
+
+---
+
+## 🔍 Debugging Tools
+
+```bash
+# Check Kafka topics
+docker exec kafka kafka-topics --list --bootstrap-server localhost:9092
+
+# Monitor order events
+docker exec kafka kafka-console-consumer --topic order-events --bootstrap-server localhost:9092
+
+# Monitor product events  
+docker exec kafka kafka-console-consumer --topic product-events --bootstrap-server localhost:9092
+
+# Check service health
+curl http://localhost:8081/actuator/health
+curl http://localhost:8082/actuator/health  
+curl http://localhost:8083/actuator/health
+```

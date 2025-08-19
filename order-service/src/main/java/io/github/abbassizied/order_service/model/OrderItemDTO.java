@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
-
 @Getter
 @Setter
 public class OrderItemDTO {
@@ -15,10 +14,8 @@ public class OrderItemDTO {
     private Integer quantity;
 
     @NotNull
-    private Long orders;
+    private Long order;
 
     @NotNull
-    @OrderItemProductUnique
     private Long product;
-
 }
