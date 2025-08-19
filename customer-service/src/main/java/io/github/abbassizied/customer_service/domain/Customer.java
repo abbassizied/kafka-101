@@ -1,6 +1,8 @@
 package io.github.abbassizied.customer_service.domain;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
@@ -13,7 +15,6 @@ import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 
 @Entity
 @Table(name = "Customers")
@@ -36,11 +37,21 @@ public class Customer {
     @Column(nullable = false, unique = true)
     private String phone;
 
-    @Column
-    private String shippingAddress;
+    @Embedded
+    @AttributeOverride(name = "street", column = @Column(name = "shipping_street"))
+    @AttributeOverride(name = "city", column = @Column(name = "shipping_city"))
+    @AttributeOverride(name = "state", column = @Column(name = "shipping_state"))
+    @AttributeOverride(name = "postalCode", column = @Column(name = "shipping_postal_code"))
+    @AttributeOverride(name = "country", column = @Column(name = "shipping_country"))
+    private Address shippingAddress;
 
-    @Column
-    private String billingAddress;
+    @Embedded
+    @AttributeOverride(name = "street", column = @Column(name = "billing_street"))
+    @AttributeOverride(name = "city", column = @Column(name = "billing_city"))
+    @AttributeOverride(name = "state", column = @Column(name = "billing_state"))
+    @AttributeOverride(name = "postalCode", column = @Column(name = "billing_postal_code"))
+    @AttributeOverride(name = "country", column = @Column(name = "billing_country"))
+    private Address billingAddress;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

@@ -31,7 +31,7 @@ A comprehensive example project demonstrating microservices architecture with Ap
 - Java 21+
 - Maven
 
-### 1. Start Infrastructure
+### Start Infrastructure
 ```bash
 # Clone the repository
 git clone https://github.com/abbassizied/kafka-101.git
@@ -41,22 +41,11 @@ cd kafka-101
 docker compose up -d
 ```
 
-### 2. Verify Services
+### Verify Services
 - **Kafka UI (Kafdrop)**: http://localhost:9000
 - **MySQL Admin (phpMyAdmin)**: http://localhost:8077
 - **Zookeeper**: localhost:2181
 - **Kafka Broker**: localhost:9092
-
-### 3. Build and Run Microservices
-```bash
-# Build all services
-mvn clean package
-
-# Run individual services
-java -jar product-service/target/*.jar
-java -jar customer-service/target/*.jar  
-java -jar order-service/target/*.jar
-```
 
 ## 📊 Service Ports
 
@@ -164,7 +153,231 @@ kafka-101/
 ├── docker/             # Docker configuration files
 │   ├── init-db/        # Database initialization scripts
 │   └── mysql_data/     # MySQL data volume (ignored by git)
-└── docker-compose.yml  # Infrastructure definition
+└── compose.yml  # Infrastructure definition
 ```
 
 ---
+
+# API Documentation - POST Requests
+
+## 📦 Products
+
+### Create a New Product
+**Endpoint:** `POST /api/products`
+
+**Description:** Creates a new product in the inventory system.
+
+**Request Body:**
+```json
+{
+  "name": "iPhone 15 Pro",
+  "description": "Latest Apple smartphone with advanced camera features",
+  "sku": "IPHONE15-PRO-256GB",
+  "price": 999.99,
+  "currentStock": 50,
+  "minStockThreshold": 10,
+  "category": "ELECTRONICS"
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8080/api/products" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "iPhone 15 Pro",
+    "description": "Latest Apple smartphone with advanced camera features",
+    "sku": "IPHONE15-PRO-256GB",
+    "price": 999.99,
+    "currentStock": 50,
+    "minStockThreshold": 10,
+    "category": "ELECTRONICS"
+  }'
+```
+
+**Required Fields:**
+- `name` (string): Product name
+- `sku` (string): Unique stock keeping unit
+- `price` (number): Product price
+- `currentStock` (integer): Initial stock quantity
+
+**Optional Fields:**
+- `description` (string): Product description
+- `minStockThreshold` (integer): Low stock alert threshold (default: 5)
+- `category` (string): Product category
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "iPhone 15 Pro",
+  "description": "Latest Apple smartphone with advanced camera features",
+  "sku": "IPHONE15-PRO-256GB",
+  "price": 999.99,
+  "currentStock": 50,
+  "minStockThreshold": 10,
+  "category": "ELECTRONICS",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+## 👥 Customers
+
+### Create a New Customer
+**Endpoint:** `POST /api/customers`
+
+**Description:** Registers a new customer in the system.
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "+1-555-0123",
+  "shippingAddress": {
+    "street": "123 Main Street",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10001",
+    "country": "USA"
+  },
+  "billingAddress": {
+    "street": "456 Business Ave",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10002",
+    "country": "USA"
+  }
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "http://localhost:8080/api/customers" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "phone": "+1-555-0123",
+    "shippingAddress": {
+      "street": "123 Main Street",
+      "city": "New York",
+      "state": "NY",
+      "postalCode": "10001",
+      "country": "USA"
+    },
+    "billingAddress": {
+      "street": "456 Business Ave",
+      "city": "New York",
+      "state": "NY",
+      "postalCode": "10002",
+      "country": "USA"
+    }
+  }'
+```
+
+**Required Fields:**
+- `name` (string): Customer's full name
+- `email` (string): Unique email address
+- `phone` (string): Phone number
+
+**Optional Fields:**
+- `shippingAddress` (object): Default shipping address
+- `billingAddress` (object): Billing address (if different from shipping)
+
+**Address Fields:**
+- `street` (string): Street address
+- `city` (string): City
+- `state` (string): State/Province code
+- `postalCode` (string): ZIP/Postal code
+- `country` (string): Country
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "+1-555-0123",
+  "shippingAddress": {
+    "street": "123 Main Street",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10001",
+    "country": "USA"
+  },
+  "billingAddress": {
+    "street": "456 Business Ave",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10002",
+    "country": "USA"
+  },
+  "dateCreated": "2024-01-15T10:30:00Z",
+  "lastUpdated": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+## ⚠️ Common Error Responses
+
+**400 Bad Request:**
+```json
+{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "details": ["Email must be valid", "Price must be positive"]
+}
+```
+
+**409 Conflict:**
+```json
+{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Customer with email already exists"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred"
+}
+```
+
+---
+
+## 🔄 Validation Rules
+
+### Product Validation:
+- `name`: 2-100 characters, required
+- `sku`: Unique, 3-50 characters, required
+- `price`: Positive number, required
+- `currentStock`: Non-negative integer, required
+- `minStockThreshold`: Non-negative integer, optional
+
+### Customer Validation:
+- `name`: 2-100 characters, required
+- `email`: Valid email format, unique, required
+- `phone`: Valid phone format, unique, required
+- Address fields: All optional, but if provided must follow format
+
+---
+
+## 🎯 Tips for Testing
+
+1. **Use Swagger UI:** Navigate to `http://localhost:8080/swagger-ui.html` for interactive testing
+2. **Start with minimal data:** Omit optional fields initially
+3. **Check uniqueness:** Ensure email and phone are unique for customers, SKU for products
+4. **Validate responses:** Check for proper status codes (201 Created for success)

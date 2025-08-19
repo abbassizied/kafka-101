@@ -1,14 +1,21 @@
+server:
+  port: 8083
+
 spring:
+  application:
+    name: order-service
   datasource:
-    url: ${JDBC_DATABASE_URL:jdbc:mysql://localhost:3306/order-service?serverTimezone=UTC}
+    url: ${JDBC_DATABASE_URL:jdbc:mysql://host.docker.internal:3306/kafka_101_orderdb?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&createDatabaseIfNotExist=true}
     username: ${JDBC_DATABASE_USERNAME:root}
-    password: ${JDBC_DATABASE_PASSWORD:<<YOUR_PASSWORD>>}
+    password: ${JDBC_DATABASE_PASSWORD:rootpass}
     hikari:
       connection-timeout: 30000
       maximum-pool-size: 10
   jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
       ddl-auto: update
+    show-sql: true
     open-in-view: false
     properties:
       hibernate:
@@ -17,6 +24,8 @@ spring:
             non_contextual_creation: true
         id:
           new_generator_mappings: true
+
+# Error handling configuration
 error:
   handling:
     http-status-in-json-response: true
@@ -27,5 +36,7 @@ error:
     codes:
       OrderStatusUnique: ORDER_STATUS_UNIQUE
       OrderItemProductUnique: ORDER_ITEM_PRODUCT_UNIQUE
+
+# Springdoc OpenAPI configuration
 springdoc:
   pathsToMatch: /, /api/**

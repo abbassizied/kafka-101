@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
-
 @Getter
 @Setter
 public class CustomerDTO {
@@ -26,10 +25,8 @@ public class CustomerDTO {
     @CustomerPhoneUnique
     private String phone;
 
-    @Size(max = 255)
-    private String shippingAddress;
+    private AddressDTO shippingAddress;
 
-    @Size(max = 255)
-    private String billingAddress;
+    private AddressDTO billingAddress;
 
 }
