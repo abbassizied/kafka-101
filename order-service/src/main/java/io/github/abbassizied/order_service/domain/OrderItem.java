@@ -1,16 +1,9 @@
 package io.github.abbassizied.order_service.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
@@ -25,20 +18,21 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public class OrderItem {
 
     @Id
-    @Column(nullable = false, updatable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(nullable = false, updatable = false)
     private Long id;
 
+    @Min(1)
     @Column(nullable = false)
     private Integer quantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)  
-    private Order order;  
+    @JoinColumn(name = "order_id", nullable = false)
+    private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY) // Changed from @OneToOne
-    @JoinColumn(name = "product_id", nullable = false) // Removed unique=true
-    private Product product;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false)
+    private ProductReplica product;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -47,4 +41,17 @@ public class OrderItem {
     @LastModifiedDate
     @Column(nullable = false)
     private OffsetDateTime lastUpdated;
+
+    // === Equals and hashCode based on id only ===
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof OrderItem other)) return false;
+        return id != null && id.equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }

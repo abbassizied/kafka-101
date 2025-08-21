@@ -1,38 +1,45 @@
 package io.github.abbassizied.order_service.service;
 
-import io.github.abbassizied.order_service.domain.Customer;
+import io.github.abbassizied.order_service.domain.CustomerReplica;
 import io.github.abbassizied.order_service.domain.Order;
 import io.github.abbassizied.order_service.domain.OrderItem;
+import io.github.abbassizied.order_service.domain.ProductReplica;
 import io.github.abbassizied.order_service.model.OrderDTO;
 import io.github.abbassizied.order_service.model.OrderItemDTO;
 import io.github.abbassizied.order_service.model.OrderStatus;
-import io.github.abbassizied.order_service.repos.CustomerRepository;
+import io.github.abbassizied.order_service.repos.CustomerReplicaRepository;
 import io.github.abbassizied.order_service.repos.OrderItemRepository;
 import io.github.abbassizied.order_service.repos.OrderRepository;
+import io.github.abbassizied.order_service.repos.ProductReplicaRepository;
 import io.github.abbassizied.order_service.util.NotFoundException;
 import io.github.abbassizied.order_service.util.ReferencedWarning;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final CustomerRepository customerRepository;
+    private final CustomerReplicaRepository customerRepository;
+    private final ProductReplicaRepository productRepository;
     private final OrderItemRepository orderItemRepository;
 
     public OrderService(final OrderRepository orderRepository,
-            final CustomerRepository customerRepository,
-            final OrderItemRepository orderItemRepository) {
+                        final CustomerReplicaRepository customerRepository,
+                        final ProductReplicaRepository productRepository,
+                        final OrderItemRepository orderItemRepository) {
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
+        this.productRepository = productRepository;
         this.orderItemRepository = orderItemRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<OrderDTO> findAll() {
         final List<Order> orders = orderRepository.findAll(Sort.by("id"));
         return orders.stream()
@@ -40,28 +47,33 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public OrderDTO get(final Long id) {
         return orderRepository.findById(id)
                 .map(this::mapToDTO)
                 .orElseThrow(NotFoundException::new);
     }
 
-    @Transactional
     public Long create(final OrderDTO orderDTO) {
         final Order order = new Order();
         mapToEntity(orderDTO, order);
 
-        // Save order first to get ID
+        // 1) Save order first to get an ID
         Order savedOrder = orderRepository.save(order);
 
-        // Save order items if provided
+        // 2) Persist order items (if any)
         if (orderDTO.getOrderItems() != null) {
             for (OrderItemDTO itemDTO : orderDTO.getOrderItems()) {
                 OrderItem orderItem = new OrderItem();
                 orderItem.setQuantity(itemDTO.getQuantity());
                 orderItem.setOrder(savedOrder);
-                // Note: You'll need to fetch the Product entity here
-                // You might need a ProductRepository or Feign client
+
+                // Resolve product from local replica (required)
+                ProductReplica product = itemDTO.getProduct() == null ? null :
+                        productRepository.findById(itemDTO.getProduct())
+                                .orElseThrow(() -> new NotFoundException("product not found"));
+                orderItem.setProduct(product);
+
                 orderItemRepository.save(orderItem);
             }
         }
@@ -69,35 +81,42 @@ public class OrderService {
         return savedOrder.getId();
     }
 
-    @Transactional
     public void update(final Long id, final OrderDTO orderDTO) {
         final Order order = orderRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
-        mapToEntity(orderDTO, order);
 
-        // Update order items if provided
+        // Update top-level fields (status, customer)
+        mapToEntity(orderDTO, order);
+        Order savedOrder = orderRepository.save(order);
+
+        // Rebuild items if provided: delete existing then add fresh
         if (orderDTO.getOrderItems() != null) {
-            // Clear existing items and add new ones
-            order.getOrderItems().clear();
+            List<OrderItem> existing = orderItemRepository.findByOrderId(id);
+            if (!existing.isEmpty()) {
+                orderItemRepository.deleteAll(existing);
+            }
 
             for (OrderItemDTO itemDTO : orderDTO.getOrderItems()) {
                 OrderItem orderItem = new OrderItem();
                 orderItem.setQuantity(itemDTO.getQuantity());
-                orderItem.setOrder(order);
-                // Note: You'll need to fetch the Product entity here
-                order.getOrderItems().add(orderItem);
+                orderItem.setOrder(savedOrder);
+
+                ProductReplica product = itemDTO.getProduct() == null ? null :
+                        productRepository.findById(itemDTO.getProduct())
+                                .orElseThrow(() -> new NotFoundException("product not found"));
+                orderItem.setProduct(product);
+
+                orderItemRepository.save(orderItem);
             }
         }
-
-        orderRepository.save(order);
     }
 
-    @Transactional
     public void delete(final Long id) {
-        // First delete order items to avoid constraint violations
+        // Delete items first to avoid FK constraint violations
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(id);
-        orderItemRepository.deleteAll(orderItems);
-
+        if (!orderItems.isEmpty()) {
+            orderItemRepository.deleteAll(orderItems);
+        }
         // Then delete the order
         orderRepository.deleteById(id);
     }
@@ -131,22 +150,24 @@ public class OrderService {
     private Order mapToEntity(final OrderDTO orderDTO, final Order order) {
         order.setStatus(orderDTO.getStatus());
 
-        final Customer customer = orderDTO.getCustomer() == null ? null
+        // Resolve replicated customer
+        final CustomerReplica customer = orderDTO.getCustomer() == null ? null
                 : customerRepository.findById(orderDTO.getCustomer())
-                        .orElseThrow(() -> new NotFoundException("customer not found"));
+                .orElseThrow(() -> new NotFoundException("customer not found"));
         order.setCustomer(customer);
 
         return order;
     }
 
+    @Transactional(readOnly = true)
     public boolean statusExists(final OrderStatus status) {
         return orderRepository.existsByStatus(status);
     }
 
+    @Transactional(readOnly = true)
     public ReferencedWarning getReferencedWarning(final Long id) {
         final ReferencedWarning referencedWarning = new ReferencedWarning();
-        final Order order = orderRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
+        final Order order = orderRepository.findById(id).orElseThrow(NotFoundException::new);
 
         // Check if order has any items
         final List<OrderItem> orderItems = orderItemRepository.findByOrderId(id);
@@ -159,7 +180,7 @@ public class OrderService {
         return null;
     }
 
-    // Additional helper methods
+    @Transactional(readOnly = true)
     public List<OrderItemDTO> getOrderItemsByOrderId(Long orderId) {
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
         return orderItems.stream()

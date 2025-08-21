@@ -2,12 +2,13 @@ package io.github.abbassizied.order_service.service;
 
 import io.github.abbassizied.order_service.domain.Order;
 import io.github.abbassizied.order_service.domain.OrderItem;
-import io.github.abbassizied.order_service.domain.Product;
+import io.github.abbassizied.order_service.domain.ProductReplica;
 import io.github.abbassizied.order_service.model.OrderItemDTO;
 import io.github.abbassizied.order_service.repos.OrderItemRepository;
 import io.github.abbassizied.order_service.repos.OrderRepository;
-import io.github.abbassizied.order_service.repos.ProductRepository;
+import io.github.abbassizied.order_service.repos.ProductReplicaRepository;
 import io.github.abbassizied.order_service.util.NotFoundException;
+
 import java.util.List;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,11 @@ public class OrderItemService {
 
     private final OrderItemRepository orderItemRepository;
     private final OrderRepository orderRepository;
-    private final ProductRepository productRepository;
+    private final ProductReplicaRepository productRepository;
 
     public OrderItemService(final OrderItemRepository orderItemRepository,
-            final OrderRepository orderRepository, final ProductRepository productRepository) {
+                            final OrderRepository orderRepository,
+                            final ProductReplicaRepository productRepository) {
         this.orderItemRepository = orderItemRepository;
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
@@ -38,62 +40,61 @@ public class OrderItemService {
     public OrderItemDTO get(final Long id) {
         return orderItemRepository.findById(id)
                 .map(this::mapToDTO)
-                .orElseThrow(NotFoundException::new);
+                .orElseThrow(() -> new NotFoundException("OrderItem with id " + id + " not found"));
     }
 
-    @Transactional
     public Long create(final OrderItemDTO orderItemDTO) {
         final OrderItem orderItem = new OrderItem();
         mapToEntity(orderItemDTO, orderItem);
         return orderItemRepository.save(orderItem).getId();
     }
 
-    @Transactional
     public void update(final Long id, final OrderItemDTO orderItemDTO) {
         final OrderItem orderItem = orderItemRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
+                .orElseThrow(() -> new NotFoundException("OrderItem with id " + id + " not found"));
         mapToEntity(orderItemDTO, orderItem);
         orderItemRepository.save(orderItem);
     }
 
-    @Transactional
     public void delete(final Long id) {
+        if (!orderItemRepository.existsById(id)) {
+            throw new NotFoundException("OrderItem with id " + id + " not found");
+        }
         orderItemRepository.deleteById(id);
     }
 
     private OrderItemDTO mapToDTO(final OrderItem orderItem) {
-        OrderItemDTO orderItemDTO = new OrderItemDTO();
-        orderItemDTO.setId(orderItem.getId());
-        orderItemDTO.setQuantity(orderItem.getQuantity());
-        orderItemDTO.setOrder(orderItem.getOrder() == null ? null : orderItem.getOrder().getId());
-        orderItemDTO.setProduct(orderItem.getProduct() == null ? null : orderItem.getProduct().getId());
-        return orderItemDTO;
+        OrderItemDTO dto = new OrderItemDTO();
+        dto.setId(orderItem.getId());
+        dto.setQuantity(orderItem.getQuantity());
+        dto.setOrder(orderItem.getOrder() != null ? orderItem.getOrder().getId() : null);
+        dto.setProduct(orderItem.getProduct() != null ? orderItem.getProduct().getId() : null);
+        return dto;
     }
 
-    private OrderItem mapToEntity(final OrderItemDTO orderItemDTO, final OrderItem orderItem) {
-        orderItem.setQuantity(orderItemDTO.getQuantity());
-        
-        // Fix: Changed variable name from 'orders' to 'order' to match field name
-        final Order order = orderItemDTO.getOrder() == null ? null
-                : orderRepository.findById(orderItemDTO.getOrder())
-                        .orElseThrow(() -> new NotFoundException("order not found")); // Fixed error message
-        orderItem.setOrder(order); // Fixed: Changed from setOrders() to setOrder()
-        
-        final Product product = orderItemDTO.getProduct() == null ? null
-                : productRepository.findById(orderItemDTO.getProduct())
-                        .orElseThrow(() -> new NotFoundException("product not found"));
-        orderItem.setProduct(product);
-        return orderItem;
+    private OrderItem mapToEntity(final OrderItemDTO dto, final OrderItem entity) {
+        entity.setQuantity(dto.getQuantity());
+
+        final Order order = dto.getOrder() == null ? null :
+                orderRepository.findById(dto.getOrder())
+                        .orElseThrow(() -> new NotFoundException("Order with id " + dto.getOrder() + " not found"));
+        entity.setOrder(order);
+
+        final ProductReplica product = dto.getProduct() == null ? null :
+                productRepository.findById(dto.getProduct())
+                        .orElseThrow(() -> new NotFoundException("Product with id " + dto.getProduct() + " not found"));
+        entity.setProduct(product);
+
+        return entity;
     }
 
-    public boolean productExists(final Long id) {
-        return orderItemRepository.existsByProductId(id);
+    // === Utility methods ===
+    public boolean productExists(final Long productId) {
+        return orderItemRepository.existsByProductId(productId);
     }
 
-    // Additional useful methods
     public List<OrderItemDTO> findByOrderId(final Long orderId) {
-        List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
-        return orderItems.stream()
+        return orderItemRepository.findByOrderId(orderId).stream()
                 .map(this::mapToDTO)
                 .toList();
     }

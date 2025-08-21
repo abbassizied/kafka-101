@@ -2,6 +2,8 @@ package io.github.abbassizied.customer_service.service;
 
 import io.github.abbassizied.customer_service.domain.Address;
 import io.github.abbassizied.customer_service.domain.Customer;
+import io.github.abbassizied.customer_service.kafka.CustomerEvent;
+import io.github.abbassizied.customer_service.kafka.CustomerProducer;
 import io.github.abbassizied.customer_service.model.AddressDTO;
 import io.github.abbassizied.customer_service.model.CustomerDTO;
 import io.github.abbassizied.customer_service.repos.CustomerRepository;
@@ -14,9 +16,11 @@ import org.springframework.stereotype.Service;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final CustomerProducer producer;
 
-    public CustomerService(final CustomerRepository customerRepository) {
+    public CustomerService(CustomerRepository customerRepository, CustomerProducer producer) {
         this.customerRepository = customerRepository;
+        this.producer = producer;
     }
 
     public List<CustomerDTO> findAll() {
@@ -35,18 +39,53 @@ public class CustomerService {
     public Long create(final CustomerDTO customerDTO) {
         final Customer customer = new Customer();
         mapToEntity(customerDTO, customer);
-        return customerRepository.save(customer).getId();
+        // 1️⃣ Save first so ID and audit fields are generated
+        Customer saved = customerRepository.save(customer);
+
+        // 2️⃣ Publish event with the saved entity
+        producer.sendEvent(new CustomerEvent(
+                "CREATED",
+                saved.getId(),
+                saved.getName(),
+                saved.getEmail(),
+                saved.getPhone(),
+                saved.getShippingAddress() != null ? saved.getShippingAddress().getFormattedAddress() : null,
+                saved.getBillingAddress() != null ? saved.getBillingAddress().getFormattedAddress() : null));
+
+        return saved.getId();
     }
 
     public void update(final Long id, final CustomerDTO customerDTO) {
         final Customer customer = customerRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
+
         mapToEntity(customerDTO, customer);
-        customerRepository.save(customer);
+        Customer updated = customerRepository.save(customer);
+
+        producer.sendEvent(new CustomerEvent(
+                "UPDATED",
+                updated.getId(),
+                updated.getName(),
+                updated.getEmail(),
+                updated.getPhone(),
+                updated.getShippingAddress() != null ? updated.getShippingAddress().getFormattedAddress() : null,
+                updated.getBillingAddress() != null ? updated.getBillingAddress().getFormattedAddress() : null));
     }
 
     public void delete(final Long id) {
-        customerRepository.deleteById(id);
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        customerRepository.delete(customer);
+
+        producer.sendEvent(new CustomerEvent(
+                "DELETED",
+                customer.getId(),
+                customer.getName(),
+                customer.getEmail(),
+                customer.getPhone(),
+                customer.getShippingAddress() != null ? customer.getShippingAddress().getFormattedAddress() : null,
+                customer.getBillingAddress() != null ? customer.getBillingAddress().getFormattedAddress() : null));
     }
 
     private CustomerDTO mapToDTO(final Customer customer) {
