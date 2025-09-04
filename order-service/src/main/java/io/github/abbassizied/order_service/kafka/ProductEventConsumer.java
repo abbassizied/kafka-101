@@ -10,20 +10,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@SuppressWarnings("java:S1068") // Suppress SonarQube unused field warning
 public class ProductEventConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(ProductEventConsumer.class);
     private final ProductReplicaRepository repository;
+    @SuppressWarnings("unused") // Suppress IDE warning
+    private final KafkaTopicsConfig topicsConfig;
 
-    public ProductEventConsumer(ProductReplicaRepository repository) {
+    public ProductEventConsumer(ProductReplicaRepository repository, KafkaTopicsConfig topicsConfig) {
         this.repository = repository;
+        this.topicsConfig = topicsConfig;
     }
 
     @Transactional
     @KafkaListener(
-            topics = "product.events",
-            groupId = "order-service-product",
-            containerFactory = "productKafkaListenerContainerFactory")
+        topics = "#{@kafkaTopicsConfig.productEvents}", // SpEL expression
+        groupId = "order-service-product",  // ← This sets the group ID
+        // Specific factory
+        containerFactory = "productKafkaListenerContainerFactory")
     public void onMessage(ProductEvent event) {
         if (event == null || event.getProductId() == null) {
             log.warn("Received invalid ProductEvent: {}", event);

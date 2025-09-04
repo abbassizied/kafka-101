@@ -5,15 +5,18 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class CustomerProducer {
-    private static final String TOPIC = "customer.events";
+    private final KafkaTopicsConfig kafkaTopicsConfig;
 
     private final KafkaTemplate<String, CustomerEvent> kafkaTemplate;
 
-    public CustomerProducer(KafkaTemplate<String, CustomerEvent> kafkaTemplate) {
+    public CustomerProducer(KafkaTemplate<String, CustomerEvent> kafkaTemplate, KafkaTopicsConfig kafkaTopicsConfig) {
         this.kafkaTemplate = kafkaTemplate;
+        this.kafkaTopicsConfig = kafkaTopicsConfig;
     }
 
     public void sendEvent(CustomerEvent event) {
-        kafkaTemplate.send(TOPIC, event.getCustomerId().toString(), event);
+        String customerTopic = kafkaTopicsConfig.getCustomerEvents();
+        System.out.println("Customer topic: " + customerTopic);
+        kafkaTemplate.send(customerTopic, event.getCustomerId().toString(), event);
     }
 }

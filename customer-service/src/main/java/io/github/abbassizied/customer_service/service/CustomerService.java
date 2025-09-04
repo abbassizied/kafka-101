@@ -49,8 +49,8 @@ public class CustomerService {
                 saved.getName(),
                 saved.getEmail(),
                 saved.getPhone(),
-                saved.getShippingAddress() != null ? saved.getShippingAddress().getFormattedAddress() : null,
-                saved.getBillingAddress() != null ? saved.getBillingAddress().getFormattedAddress() : null));
+                saved.getShippingAddress() != null ? saved.getShippingAddress() : null,
+                saved.getBillingAddress() != null ? saved.getBillingAddress() : null));
 
         return saved.getId();
     }
@@ -68,8 +68,8 @@ public class CustomerService {
                 updated.getName(),
                 updated.getEmail(),
                 updated.getPhone(),
-                updated.getShippingAddress() != null ? updated.getShippingAddress().getFormattedAddress() : null,
-                updated.getBillingAddress() != null ? updated.getBillingAddress().getFormattedAddress() : null));
+                updated.getShippingAddress() != null ? updated.getShippingAddress() : null,
+                updated.getBillingAddress() != null ? updated.getBillingAddress() : null));
     }
 
     public void delete(final Long id) {
@@ -84,8 +84,8 @@ public class CustomerService {
                 customer.getName(),
                 customer.getEmail(),
                 customer.getPhone(),
-                customer.getShippingAddress() != null ? customer.getShippingAddress().getFormattedAddress() : null,
-                customer.getBillingAddress() != null ? customer.getBillingAddress().getFormattedAddress() : null));
+                customer.getShippingAddress() != null ? customer.getShippingAddress() : null,
+                customer.getBillingAddress() != null ? customer.getBillingAddress() : null));
     }
 
     private CustomerDTO mapToDTO(final Customer customer) {

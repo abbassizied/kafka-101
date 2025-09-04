@@ -24,18 +24,19 @@ spring:
             non_contextual_creation: true
         id:
           new_generator_mappings: true
+
+  # Kafka Configuration
   kafka:
     bootstrap-servers: localhost:9092
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
-      group-id: order-service-group
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
+      auto-offset-reset: earliest
+      # REMOVE the deserializer configs from here since we're moving them to Java config
 
+app:
+  kafka:
+    topics:
+      product-events: product-events
+      customer-events: customer-events
 
 # Error handling configuration
 error:

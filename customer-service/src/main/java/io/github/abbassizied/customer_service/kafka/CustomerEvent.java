@@ -1,5 +1,6 @@
 package io.github.abbassizied.customer_service.kafka;
 
+import io.github.abbassizied.customer_service.domain.Address;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,7 @@ public class CustomerEvent {
     private String name;
     private String email;
     private String phone;
-    private String shippingAddress; // formatted address
-    private String billingAddress;  // formatted address
+    private Address shippingAddress;
+    private Address billingAddress;
 }
 

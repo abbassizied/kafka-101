@@ -1,0 +1,82 @@
+{
+	"info": {
+		"_postman_id": "9987512a-99d7-4266-92a2-d06464998044",
+		"name": "kafka-101",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "10958206"
+	},
+	"item": [
+		{
+			"name": "Create a New Product",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"iPhone 15 Pro\",\r\n    \"price\": 999.99,\r\n    \"quantity\": 50\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8081/api/products"
+			},
+			"response": []
+		},
+		{
+			"name": "Create a New Customer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"name\": \"John Doe\",\r\n  \"email\": \"john.doe@example.com\",\r\n  \"phone\": \"+1-555-0123\",\r\n  \"shippingAddress\": {\r\n    \"street\": \"123 Main Street\",\r\n    \"city\": \"New York\",\r\n    \"state\": \"NY\",\r\n    \"postalCode\": \"10001\",\r\n    \"country\": \"USA\"\r\n  },\r\n  \"billingAddress\": {\r\n    \"street\": \"456 Business Ave\",\r\n    \"city\": \"New York\",\r\n    \"state\": \"NY\",\r\n    \"postalCode\": \"10002\",\r\n    \"country\": \"USA\"\r\n  }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8082/api/customers"
+			},
+			"response": []
+		},
+		{
+			"name": "Create a New Order",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"status\": \"CREATED\",\r\n  \"customer\": 1,\r\n  \"orderItems\": [\r\n    {\r\n      \"quantity\": 2,\r\n      \"product\": 1\r\n    }\r\n  ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8083/api/orders"
+			},
+			"response": []
+		},
+		{
+			"name": "Check product replica in Order Service",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8083/api/products/1"
+			},
+			"response": []
+		},
+		{
+			"name": "Check customer replica in Order Service",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8083/api/customers/1"
+			},
+			"response": []
+		}
+	]
+}
