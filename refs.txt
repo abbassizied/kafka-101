@@ -1,0 +1,5 @@
+# Kafka
+
+- https://github.com/abbassizied/kafka-roadmap/blob/main/spring-boot-kafka/1-kafka-core-concepts.md
+- https://github.com/abbassizied/Microservices-Istio-AI/blob/main/architectural-concepts/domain-driven-design.md
+- https://docs.spring.io/spring-kafka/reference/index.html
